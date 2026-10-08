@@ -87,6 +87,7 @@ export function applyAction(state, action, rng = Math.random) {
   const canonical = legalActions(state).find(a => a.type === action?.type && a.at === action.at && a.index === action.index && a.color === action.color && a.to === action.to);
   if (!canonical) throw new Error('这个动作当前不可用');
   const s = structuredClone(state); const p = s.turn; const who = p === 0 ? '你' : '对手'; s.moves++;
+  s.lastAction = {player:p,label:actionLabel(canonical,state)};
   if (s.kind === 'gomoku') {
     s.board[action.at] = p + 1; s.last = action.at;
     note(s, `${who}落子 ${Math.floor(action.at / 15) + 1} 行 ${action.at % 15 + 1} 列`);
@@ -255,6 +256,7 @@ export function chooseLocal(s, rng = Math.random) {
 }
 export function validateGame(s) {
   if(!s || s.version!==VERSION || !Object.hasOwn(GAMES, s.kind) || !['playing','done'].includes(s.status) || ![0,1].includes(s.turn) || !Array.isArray(s.log) || s.log.length>40 || !s.log.every(x=>typeof x==='string' && x.length<500)) throw new Error('存档无效');
+  if(s.lastAction!==undefined&&(!s.lastAction||![0,1].includes(s.lastAction.player)||typeof s.lastAction.label!=='string'||s.lastAction.label.length>120))throw new Error('动作记录无效');
   if(s.kind==='gomoku') {
     if(!Array.isArray(s.board)||s.board.length!==225||!s.board.every(x=>[0,1,2].includes(x))) throw new Error('棋盘无效');
   } else {

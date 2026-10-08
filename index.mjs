@@ -1,12 +1,13 @@
 import { readFile } from 'node:fs/promises';
 import z from '@deepseek-ai/schemastery';
-import { GAMES, legalActions, observation, validateGame, chooseLocal } from './games.mjs';
+import { GAMES, legalActions, observation, validateGame } from './games.mjs';
+import { MODEL_PROFILES, opponentOptions, chooseOpponent } from './opponents.mjs';
 
 export const name = 'dsh-bgame';
 export const inject = ['webServer', 'connection', 'llm'];
 export const Config = z.object({});
 const response = (value, status = 200) => Response.json(value, { status, headers: { 'cache-control': 'no-store' } });
-const assets = { 'client.mjs': 'text/javascript', 'games.mjs': 'text/javascript', 'bgame.css': 'text/css', 'play': 'text/html' };
+const assets = { 'opponents.mjs': 'text/javascript', 'client.mjs': 'text/javascript', 'games.mjs': 'text/javascript', 'bgame.css': 'text/css', 'play': 'text/html' };
 
 export const MODEL_TIMEOUT_MS = 60000;
 export class ModelMoveError extends Error {
@@ -17,7 +18,7 @@ export function modelFailure(error, signal) {
   const code = signal?.reason?.name === 'TimeoutError' || error?.name === 'TimeoutError' ? 'TIMEOUT' : String(error?.code ?? error?.failure?.code ?? 'MODEL_ERROR');
   const status = error?.status ?? error?.failure?.status;
   const descriptions = {
-    TIMEOUT:'模型等待超过 60 秒', MAX_TOKENS:'模型耗尽输出额度，尚未完成走法',
+    TIMEOUT:'模型等待超时', MAX_TOKENS:'模型耗尽输出额度，尚未完成走法',
     INVALID_RESPONSE:'模型回复不是有效的走法 JSON', INVALID_ACTION:'模型选择了不合法的动作',
     RESPONSE_TOO_LONG:'模型回复超出长度限制', STREAM_CLOSED:'模型回复中途断开',
     EMPTY_RESPONSE:'模型没有返回走法', TOOL_CALLS:'模型返回了工具调用，未给出走法',
@@ -31,14 +32,15 @@ export function modelFailure(error, signal) {
 }
 
 /** A model sees only its own cards and public facts. Its reply selects one legal action. */
-export async function modelMove(llm, state, selection, signal) {
+export async function modelMove(llm, state, selection, signal, options = {}) {
+  const settings = opponentOptions(options), profile = MODEL_PROFILES[settings.thinking], started = Date.now();
   validateGame(state);
   if (state.status !== 'playing' || state.turn !== 1) throw new Error('当前不是对手回合');
   const actions = legalActions(state);
   const info = await llm.resolveModelInfo(selection.provider, selection.model, signal);
   const efforts = info.reasoning?.efforts ?? [];
-  const effort = ['off','minimal','low'].map(id=>efforts.find(e=>e.id===id)).find(Boolean) ?? efforts[0];
-  const prepared = await llm.prepareCall({ provider: selection.provider, model: selection.model, maxTokens: 8192, ...(effort?{reasoningEffort:effort.id}:{}) }, signal);
+  const effort = profile.efforts.map(id=>efforts.find(e=>e.id===id)).find(Boolean) ?? efforts[0];
+  const prepared = await llm.prepareCall({ provider: selection.provider, model: selection.model, maxTokens: profile.maxTokens, ...(effort?{reasoningEffort:effort.id}:{}) }, signal);
   const view = observation(state, 1);
   const prompt = {
     rules: GAMES[state.kind].rules,
@@ -57,7 +59,7 @@ export async function modelMove(llm, state, selection, signal) {
   let truncated = false;
   for await (const chunk of prepared.stream({
     ...prepared.config,
-    system: '你是 DSH 小游戏对手。你只能看到自己的手牌和公开信息。按规则认真对战。从 choices 中直接选择一个动作；先返回 choice 再返回 say。简短判断即可，不要穷举候选或模拟多步对局。只输出 JSON：{"choice":整数,"say":"一句简短中文互动话语"}。不得猜测或要求提供对方暗牌，不使用工具。',
+    system: (settings.thinking==='thoughtful'?'先判断能否直接获胜或阻止对方获胜，再有限比较少量候选和风险。避免穷举或无休止模拟。':'简短判断即可，直接出招。')+'你是 DSH 小游戏对手。你只能看到自己的手牌和公开信息。按规则认真对战。从 choices 中直接选择一个动作；先返回 choice 再返回 say。不要穷举所有候选。只输出 JSON：{"choice":整数,"say":"一句简短中文互动话语"}。不得猜测或要求提供对方暗牌，不使用工具。',
     messages: [{ role: 'user', content: [{ type: 'text', text: JSON.stringify(prompt) }] }],
     signal,
   })) {
@@ -82,7 +84,7 @@ export async function modelMove(llm, state, selection, signal) {
   try { result = JSON.parse(match?.[0] ?? clean); }
   catch { throw new ModelMoveError(truncated?'MAX_TOKENS':text.trim()?'INVALID_RESPONSE':'EMPTY_RESPONSE','模型回复不是有效 JSON'); }
   if (!result || !Number.isInteger(result.choice) || !actions[result.choice]) throw new ModelMoveError(truncated?'MAX_TOKENS':'INVALID_ACTION','模型选择了无效动作');
-  return { action: actions[result.choice], say: typeof result.say === 'string' ? result.say.slice(0, 120) : '', usage };
+  return { action: actions[result.choice], say: typeof result.say === 'string' ? result.say.slice(0, 120) : '', usage, meta: {source:'model',thinking:settings.thinking,reasoningEffort:prepared.config.reasoningEffort??null,elapsedMs:Date.now()-started} };
 }
 
 export function apply(ctx) {
@@ -123,16 +125,19 @@ export function apply(ctx) {
         if (body.length > 24000) return response({ error: '牌局数据过大。' }, 413);
         const input = JSON.parse(body);
         state = validateGame(input.state);
+        const options = opponentOptions(input.options ?? {failure:'auto'}), profile = MODEL_PROFILES[options.thinking];
         if (state.turn !== 1 || state.status !== 'playing') return response({ error: '当前不是对手回合。' }, 400);
         const catalog = await models();
         const selected = input.selection ?? catalog.default;
         if (!selected || !catalog.models.some(m => m.provider === selected.provider && m.id === selected.model)) return response({ error: '请先在 dsh 设置中配置并选择模型。' }, 400);
-        const signal = AbortSignal.any([request.signal, lifetime.signal, AbortSignal.timeout(MODEL_TIMEOUT_MS)]);
-        try { return response(await modelMove(ctx.llm, state, selected, signal)); }
+        const signal = AbortSignal.any([request.signal, lifetime.signal, AbortSignal.timeout(profile.timeoutMs)]);
+        try { return response(await modelMove(ctx.llm, state, selected, signal, options)); }
         catch (error) {
           if (request.signal.aborted || lifetime.signal.aborted) return response({ error: '已取消。' }, 499);
           const failure = modelFailure(error,signal);
-          return response({ action: chooseLocal(state), say: '', fallback: true, reason:failure.code, notice: failure.message+'，电脑对手接手了这一步。' });
+          const notice = failure.code==='TIMEOUT' ? `模型等待超过 ${profile.timeoutMs/1000} 秒` : failure.message;
+          if(options.failure==='ask') return response({retryable:true,reason:failure.code,notice:notice+'。请选择重试或电脑代打本步。'});
+          return response({action:chooseOpponent(state,options.difficulty),say:'',fallback:true,reason:failure.code,notice:notice+'，电脑对手接手了这一步。',meta:{source:'computer',difficulty:options.difficulty,thinking:options.thinking}});
         }
       } catch { return response({ error: '牌局或请求无效，请重新开局。' }, 400); }
       finally { pending--; }

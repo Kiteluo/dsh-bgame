@@ -1,6 +1,6 @@
 {
   "name": "dsh-bgame",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "type": "module",
   "description": "DSH Web 小游戏插件：德州扑克、21 点、五子棋、UNO，支持电脑和模型对手。",
   "icon": "./icon.svg",
@@ -39,7 +39,9 @@
     "README.md",
     "native-runtime.mjs",
     "model-runtime.mjs",
-    "move-runtime.mjs"
+    "move-runtime.mjs",
+    "opponents.mjs",
+    "opponent-runtime.mjs"
   ],
   "scripts": {
     "test": "node --test test/*.test.mjs",

@@ -5,7 +5,7 @@ import {runEdge} from './cdp-browser.mjs';
 const home=fileURLToPath(new URL('./hot-update-home/',import.meta.url));
 const profile=home+'/profiles/web';const fixture=home+'/fixture';
 await mkdir(profile+'/node_modules',{recursive:true});await mkdir(fixture+'/locale',{recursive:true});
-for(const file of ['index.mjs','move-runtime.mjs','model-runtime.mjs','native-runtime.mjs','native-client.js','client.mjs','games.mjs','bgame.css','icon.svg','cordis.patch.yml','locale/en.json','locale/zh.json'])await writeFile(fixture+'/'+file,await readFile(new URL('../'+file,import.meta.url)));
+for(const file of ['index.mjs','opponents.mjs','opponent-runtime.mjs','move-runtime.mjs','model-runtime.mjs','native-runtime.mjs','native-client.js','client.mjs','games.mjs','bgame.css','icon.svg','cordis.patch.yml','locale/en.json','locale/zh.json'])await writeFile(fixture+'/'+file,await readFile(new URL('../'+file,import.meta.url)));
 const currentManifest=JSON.parse(await readFile(new URL('../package.json',import.meta.url),'utf8'));
 const initialManifest=structuredClone(currentManifest);delete initialManifest.dsh.client;
 await writeFile(fixture+'/package.json',JSON.stringify(initialManifest));
