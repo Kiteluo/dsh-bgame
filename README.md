@@ -6,6 +6,18 @@ DSH Web 小游戏插件。包含德州扑克、21 点、五子棋和 UNO，可�
 
 需要 Node.js 24 或以上，以及已经初始化 Web profile 的 DeepSeek Harness。当前验证版本为 DSH `0.1.7-rc.2`。
 
+### 快速安装
+
+```sh
+dsh plugin --profile web add github:Kiteluo/dsh-bgame
+```
+
+安装后启动 DSH Web 或刷新已运行的页面，在左侧导航和插件列表中打开 **dsh-bgame**。该命令使用当前 `DSH_HOME` 下的 Web profile。
+
+当前仓库为私有，安装时需要具有该仓库读取权限的 GitHub 账号，并完成 Git 身份验证。
+
+### 从源码安装
+
 ```sh
 git clone https://github.com/Kiteluo/dsh-bgame.git
 cd dsh-bgame
