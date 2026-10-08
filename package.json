@@ -1,0 +1,68 @@
+{
+  "name": "dsh-bgame",
+  "version": "0.3.0",
+  "type": "module",
+  "description": "DSH Web 小游戏插件：德州扑克、21 点、五子棋、UNO，支持电脑和模型对手。",
+  "icon": "./icon.svg",
+  "exports": {
+    ".": "./index.mjs",
+    "./client": "./native-client.js",
+    "./package.json": "./package.json",
+    "./locale/*": "./locale/*"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-plugin-manager"
+      ]
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "~4.0.4"
+  },
+  "files": [
+    "index.mjs",
+    "native-client.js",
+    "client.mjs",
+    "games.mjs",
+    "bgame.css",
+    "icon.svg",
+    "locale",
+    "cordis.patch.yml",
+    "install.mjs",
+    "README.md",
+    "native-runtime.mjs",
+    "model-runtime.mjs",
+    "move-runtime.mjs"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "test:ui": "node test/native-ui-smoke.mjs",
+    "test:browser": "node test/browser-smoke.mjs && node test/browser-smoke.mjs --mobile",
+    "test:hot-update": "node test/hot-update-smoke.mjs"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "~3.18.4"
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-app-boot": "0.1.7-rc.2"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kiteluo/dsh-bgame.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Kiteluo/dsh-bgame/issues"
+  },
+  "homepage": "https://github.com/Kiteluo/dsh-bgame#readme"
+}

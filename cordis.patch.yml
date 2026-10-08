@@ -1,0 +1,3 @@
+- insert:
+    - id: dsh-bgame-move
+      name: './move-runtime.mjs'

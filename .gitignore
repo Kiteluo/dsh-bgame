@@ -1,0 +1,9 @@
+node_modules/
+*.tgz
+*.log
+.env
+.env.*
+.dsh/
+/test/*-home/
+/test/edge-profile/
+/artifacts/

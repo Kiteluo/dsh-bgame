@@ -1,0 +1,66 @@
+# dsh-bgame
+
+DSH Web 小游戏插件。包含德州扑克、21 点、五子棋和 UNO，可与电脑或已配置的模型对战。
+
+## 安装
+
+需要 Node.js 24 或以上，以及已经初始化 Web profile 的 DeepSeek Harness。当前验证版本为 DSH `0.1.7-rc.2`。
+
+```sh
+git clone https://github.com/Kiteluo/dsh-bgame.git
+cd dsh-bgame
+npm install
+node install.mjs
+```
+
+安装器使用 `$DSH_HOME/profiles/web`，未设置 `DSH_HOME` 时默认使用 `~/.dsh/profiles/web`。在本地 DSH 工作区的 `plugins/` 目录下运行时，也会识别该工作区已有的 `.dsh/profiles/web`。可显式指定 profile：
+
+```sh
+node install.mjs --profile /path/to/.dsh/profiles/web
+```
+
+安装器登记本地 link 依赖和插件 bundle，同步已有 pnpm 锁文件，备份修改前的配置，并迁移旧名称 `dsh-arcade`。重复执行不会重复登记。插件源码目录需要保留，目录链接会指向它。
+
+首次安装后启动 DSH Web；已在运行的服务会热加载插件配置。刷新网页，左侧导航和「插件 → 已安装」中均显示 **dsh-bgame**，插件详情提供「打开游戏大厅」。
+
+## 使用
+
+- **电脑对手**：本地规则策略，不调用模型。
+- **模型对手**：使用 DSH 中已配置的模型服务，消耗该模型的调用额度。模型只能看到自己的手牌和公开信息，程序验证其走法。
+- **暂停 / 回到工作**：取消当前游戏请求并保存进度，不向工作会话插入消息。
+- **自动存档**：每款游戏保存一局，重新打开可继续。旧版 `dsh-arcade` 的浏览器存档会自动读取；清除站点数据会删除存档。
+
+游戏调用优先使用模型支持的关闭思考档位；强制推理模型使用支持的最低档位。输出上限为 8192 token，等待上限为 60 秒。模型返回完整合法的 JSON 走法后，即使结束标记为输出额度用尽，也会保留它的选择。未完成或非法回复由电脑接手，并显示具体原因。
+
+## 游戏规则
+
+| 游戏 | 范围 |
+| --- | --- |
+| 德州扑克 | 双人无限注，盲注 10/20，完整四轮下注及最佳五张牌比较；按有效筹码限制下注，不设边池 |
+| 21 点 | 庄家含软 17 停牌，天然 21 点赔 3:2，可加倍；不含分牌与保险 |
+| 五子棋 | 15×15 自由五子棋，黑先，无禁手，连续五子或以上获胜 |
+| UNO | 108 张牌，双人局，跳过/反转/+2/+4/换色；不叠罚牌、不设质疑，自动喊 UNO |
+
+德扑与 21 点使用虚拟筹码，每局重新分配。
+
+## 开发与验证
+
+```sh
+npm test
+npm run test:ui
+npm run test:browser
+npm run test:hot-update
+```
+
+`npm test` 包含规则、300 局随机完整牌局、隐藏手牌、模型动作约束、输出截断处理和真实 DSH 启动预检。浏览器检查使用 Windows 上的本机无界面 Edge；测试 profile、浏览器数据和报告写入忽略目录，不会提交到仓库。模型交互测试使用模拟模型，真实 DeepSeek Flash 已通过五子棋开局、中盘和德扑走法验证。
+
+主要文件：
+
+- `index.mjs`：认证静态资源和模型 API。
+- `native-client.js`：原生导航、主面板、插件详情入口。
+- `client.mjs` / `bgame.css`：游戏界面。
+- `games.mjs`：共用游戏规则。
+- `cordis.patch.yml` / `move-runtime.mjs`：插件 bundle 与运行入口。
+- `install.mjs`：本地安装和旧名称迁移。
+
+插件使用正式 `dsh.bundle` / `dsh.client` 声明。游戏在同源 iframe 中运行，静态资源和模型 API 复用 DSH 的连接认证。源码和 JSON 使用 UTF-8 无 BOM。
