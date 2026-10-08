@@ -67,26 +67,3 @@ node install.mjs --profile /path/to/.dsh/profiles/web
 模型 API Key 或登录凭据由 DSH 的模型服务管理。插件通过 DSH 发起模型调用，前端请求和游戏存档不包含模型凭据。电脑模式无需配置模型。
 
 对局和对战选项保存在浏览器本地，不上传到 GitHub。仓库忽略本地环境变量文件、DSH 配置目录、测试 profile、浏览器数据和生成报告。代码中的 token 输出预算表示模型生成上限，测试中的凭据字符串是虚拟样例。
-
-## 开发与验证
-
-```sh
-npm test
-npm run test:ui
-npm run test:browser
-npm run test:hot-update
-```
-
-`npm test` 的 32 项检查包含规则、300 局随机完整牌局、隐藏手牌、模型动作约束、输出截断处理、三档电脑合法性与暗牌隔离、失败重试、对局信息和真实 DSH 启动预检。桌面和窄屏各有 40 项交互检查，原生入口和热更新各有 9 项检查。浏览器检查使用 Windows 上的本机无界面 Edge；测试 profile、浏览器数据和报告写入忽略目录，不会提交到仓库。模型交互测试使用模拟模型，真实 DeepSeek Flash 已通过五子棋开局、中盘和德扑走法验证。
-
-主要文件：
-
-- `index.mjs`：认证静态资源和模型 API。
-- `native-client.js`：原生导航、主面板、插件详情入口。
-- `client.mjs` / `bgame.css`：游戏界面。
-- `games.mjs`：共用游戏规则。
-- `opponents.mjs`：电脑难度、模型出招配置和对局信息。
-- `cordis.patch.yml` / `opponent-runtime.mjs`：插件 bundle 与运行入口。
-- `install.mjs`：本地安装和旧名称迁移。
-
-插件使用正式 `dsh.bundle` / `dsh.client` 声明。游戏在同源 iframe 中运行，静态资源和模型 API 复用 DSH 的连接认证。源码和 JSON 使用 UTF-8 无 BOM。
