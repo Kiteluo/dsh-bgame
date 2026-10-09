@@ -61,3 +61,7 @@ node install.mjs --profile /path/to/.dsh/profiles/web
 | UNO | 108 张牌，双人局，跳过/反转/+2/+4/换色；不叠罚牌、不设质疑，自动喊 UNO |
 
 德扑与 21 点使用虚拟筹码，每局重新分配。
+
+## 许可证
+
+[MIT](LICENSE) · Copyright (c) 2026 Kiteluo

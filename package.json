@@ -41,7 +41,8 @@
     "model-runtime.mjs",
     "move-runtime.mjs",
     "opponents.mjs",
-    "opponent-runtime.mjs"
+    "opponent-runtime.mjs",
+    "LICENSE"
   ],
   "scripts": {
     "test": "node --test test/*.test.mjs",
@@ -66,5 +67,6 @@
   "bugs": {
     "url": "https://github.com/Kiteluo/dsh-bgame/issues"
   },
-  "homepage": "https://github.com/Kiteluo/dsh-bgame#readme"
+  "homepage": "https://github.com/Kiteluo/dsh-bgame#readme",
+  "license": "MIT"
 }
